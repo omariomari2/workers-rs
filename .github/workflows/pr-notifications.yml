@@ -1,0 +1,33 @@
+name: PR notifications
+
+on:
+  schedule:
+    - cron: '7 0,12 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: notify-cloudflare-workers-rs-1080
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.repository == 'omariomari2/workers-rs' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Test notification logic
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_pr_notify.py' -v
+      - name: Check upstream PR and notify on changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRACKING_ISSUE: '1'
+        run: python3 -B .github/scripts/pr_notify.py
